@@ -3,13 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <title>はじめてのブロック崩し</title>
-  <style>
-    canvas {
-      background: #eee;
-      display: block;
-      margin: 50px auto;
-    }
-  </style>
+<style>
+  body {
+    margin: 0;
+    touch-action: none; /* ← これが超重要 */
+  }
+  canvas {
+    background: #eee;
+    display: block;
+    margin: 50px auto;
+  }
+</style>
 </head>
 <body>
 
@@ -98,6 +102,10 @@ canvas.addEventListener("pointerleave", () => {
   touchRight = false;
 });
 
+canvas.addEventListener("pointercancel", () => {
+  touchLeft = false;
+  touchRight = false;
+});
 
 
   function drawBall() {
