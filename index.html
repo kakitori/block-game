@@ -59,10 +59,8 @@ for (let c = 0; c < brickColumnCount; c++) {
 let touchLeft = false;
 let touchRight = false;
 
-let isGameOver = false;
-let waitForReload = false; // ← 追加
-let isStarted = false; // ← 追加
-let isClear = false; // ← 追加
+let gameState = "start";
+
 
 
 
@@ -86,19 +84,13 @@ let isClear = false; // ← 追加
 // タッチ or マウス押下
 canvas.addEventListener("pointerdown", (e) => {
 
-  // ★ START画面ならスタート
-  if (!isStarted) {
-    isStarted = true;
+  // START / GAME OVER / CLEAR → ゲーム開始
+  if (gameState !== "playing") {
+    resetGame();
     return;
   }
 
-  // ★ GAME OVER画面ならリロード
-  if (waitForReload) {
-    location.reload();
-    return;
-  }
-
-  // ↓ 通常の左右操作
+  // 通常操作
   const rect = canvas.getBoundingClientRect();
   const xPos = e.clientX - rect.left;
 
@@ -108,6 +100,8 @@ canvas.addEventListener("pointerdown", (e) => {
     touchRight = true;
   }
 });
+
+
 
 
 
@@ -205,24 +199,20 @@ function drawClearScreen() {
 
 function update() {
 
-// START待ち
-if (!isStarted) {
-  drawStartScreen();
-  return;
-}
+  if (gameState === "start") {
+    drawStartScreen();
+    return;
+  }
 
-// CLEAR（← GAME OVER より上）
-if (isClear) {
-  drawClearScreen();
-  return;
-}
+  if (gameState === "clear") {
+    drawClearScreen();
+    return;
+  }
 
-if (isGameOver) {
-  drawGameOver();
-
-  return; // ← ここが超重要
-}
-
+  if (gameState === "gameover") {
+    drawGameOver();
+    return;
+  }
 
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -266,10 +256,11 @@ if (
 }
 
 
-if (y - radius > canvas.height && !isGameOver) {
-  isGameOver = true;
-  waitForReload = true; // ← 再スタート待ち
+if (y - radius > canvas.height) {
+  gameState = "gameover";
+  return;
 }
+
 
 
 
@@ -284,16 +275,12 @@ if (y - radius > canvas.height && !isGameOver) {
   }
 
 // クリア判定（一本化）
-if (cleared && !isClear) {
-  isClear = true;
-  waitForReload = true;
+if (cleared) {
+  gameState = "clear";
+  return;
 }
 
 
-if (cleared && !isGameOver && !isClear) {
-  isClear = true;
-  waitForReload = true;
-}
 
 
 
@@ -348,6 +335,36 @@ function collisionDetection() {
     }
   }
 }
+
+
+function resetGame() {
+  // 状態
+  gameState = "playing";
+
+  // ボール
+  x = canvas.width / 2;
+  y = canvas.height - 30;
+  dx = 2;
+  dy = -2;
+
+  // パドル
+  paddleX = (canvas.width - paddleWidth) / 2;
+
+  // ブロック
+  for (let c = 0; c < brickColumnCount; c++) {
+    for (let r = 0; r < brickRowCount; r++) {
+      bricks[c][r].status = 1;
+    }
+  }
+
+  // 入力リセット
+  touchLeft = false;
+  touchRight = false;
+  rightPressed = false;
+  leftPressed = false;
+}
+
+
 
 
   setInterval(update, 16);
