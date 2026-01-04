@@ -34,6 +34,20 @@ canvas {
 <script>
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
+  
+  // クリア画面用画像
+const clearImage = new Image();
+clearImage.src = "clear.png"; // ← 画像ファイル名
+
+
+// 効果音
+const hitSound = new Audio("hit.mp3");
+const breakSound = new Audio("break.mp3");
+
+// iOS対策（音を軽く）
+hitSound.volume = 0.5;
+breakSound.volume = 0.6;
+
 
   let x = 200;
   let y = 150;
@@ -56,6 +70,11 @@ let brickHeight = 20;
 let brickPadding = 10;
 let brickOffsetTop = 30;
 let brickOffsetLeft = 30;
+
+// 紙吹雪
+let confetti = [];
+const confettiCount = 80;
+
 
 let bricks = [];
 for (let c = 0; c < brickColumnCount; c++) {
@@ -193,17 +212,68 @@ function drawClearScreen() {
   ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.fillStyle = "yellow";
-  ctx.font = "48px sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("CLEAR!", canvas.width / 2, canvas.height / 2);
+  // 🎉 紙吹雪
+  drawConfetti();
 
-  ctx.font = "20px sans-serif";
-  ctx.fillText(
-    "画面を押すか、リロードで再スタート",
-    canvas.width / 2,
-    canvas.height / 2 + 40
+  // 画像
+  const imgWidth = 500;
+  const imgHeight = 400;
+  ctx.drawImage(
+    clearImage,
+    (canvas.width - imgWidth) / 2,
+    (canvas.height - imgHeight) / 2 - 20,
+    imgWidth,
+    imgHeight
   );
+
+  ctx.fillStyle = "white";
+  ctx.font = "20px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    "画面をタップしてもう一度！",
+    canvas.width / 2,
+    canvas.height - 60
+  );
+}
+
+
+
+function initConfetti() {
+  confetti = [];
+  for (let i = 0; i < confettiCount; i++) {
+    confetti.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * -canvas.height,
+      size: 6 + Math.random() * 6,
+      speed: 2 + Math.random() * 3,
+      color: `hsl(${Math.random() * 360}, 80%, 60%)`,
+      rotation: Math.random() * Math.PI,
+      rotationSpeed: (Math.random() - 0.5) * 0.2
+    });
+  }
+}
+
+function drawConfetti() {
+  confetti.forEach(p => {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rotation);
+
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+
+    ctx.restore();
+
+    // 動き
+    p.y += p.speed;
+    p.rotation += p.rotationSpeed;
+
+    // 下に落ちたら上に戻す
+    if (p.y > canvas.height) {
+      p.y = -10;
+      p.x = Math.random() * canvas.width;
+    }
+  });
 }
 
 
@@ -253,6 +323,11 @@ if (
   x > paddleX &&
   x < paddleX + paddleWidth
 ) {
+
+// 効果音（打ち返し）
+hitSound.currentTime = 0;
+hitSound.play();
+
   let hitPos = (x - (paddleX + paddleWidth / 2)) / (paddleWidth / 2);
   let maxAngle = Math.PI / 3;
   let angle = hitPos * maxAngle;
@@ -290,9 +365,11 @@ if (y - radius > canvas.height) {
 
 // クリア判定（一本化）
 if (cleared) {
+  initConfetti(); // ← 追加
   gameState = "clear";
   return;
 }
+
 
 
 
@@ -342,8 +419,15 @@ function collisionDetection() {
           y > b.y &&
           y < b.y + brickHeight
         ) {
+
           dy = -dy;
           b.status = 0;
+          
+  // 効果音（ブロック破壊）
+  breakSound.currentTime = 0;
+  breakSound.play();
+          
+          
         }
       }
     }
